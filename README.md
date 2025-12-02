@@ -256,7 +256,7 @@ Este projeto está sob a licença MIT.
 
 ## 👨‍💻 Autor
 
-**Bruno Sousa**
+**Bruno Vargas**
 - GitHub: [@brusodev](https://github.com/brusodev)
 
 ---
@@ -269,4 +269,4 @@ Este projeto está sob a licença MIT.
 
 ---
 
-**Desenvolvido com ❤️ por Bruno Sousa**
+**Desenvolvido com ❤️ por Bruno Vargas**
