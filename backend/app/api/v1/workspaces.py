@@ -42,82 +42,7 @@ def create_workspace(
     return workspace
 
 
-@router.get("/{workspace_id}", response_model=WorkspaceResponse)
-def get_workspace(
-    workspace_id: UUID,
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
-):
-    """Get workspace details"""
-    workspace = crud_workspace.get_by_id(db, workspace_id=workspace_id)
-    if not workspace:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workspace not found"
-        )
-    
-    # Check if user is a member
-    if not crud_workspace.is_member(db, workspace_id=workspace_id, user_id=current_user.id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not a member of this workspace"
-        )
-    
-    return workspace
-
-
-@router.patch("/{workspace_id}", response_model=WorkspaceResponse)
-def update_workspace(
-    workspace_id: UUID,
-    workspace_in: WorkspaceUpdate,
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
-):
-    """Update workspace"""
-    workspace = crud_workspace.get_by_id(db, workspace_id=workspace_id)
-    if not workspace:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workspace not found"
-        )
-    
-    # Check if user is a member
-    if not crud_workspace.is_member(db, workspace_id=workspace_id, user_id=current_user.id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not a member of this workspace"
-        )
-    
-    updated_workspace = crud_workspace.update(db, workspace=workspace, workspace_in=workspace_in)
-    return updated_workspace
-
-
-@router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_workspace(
-    workspace_id: UUID,
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
-):
-    """Delete workspace (owner only)"""
-    workspace = crud_workspace.get_by_id(db, workspace_id=workspace_id)
-    if not workspace:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workspace not found"
-        )
-
-    # Check if user is the owner
-    if workspace.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the owner can delete the workspace"
-        )
-
-    crud_workspace.delete(db, workspace=workspace)
-    return None
-
-
-# Member Management Endpoints
+# Member Management Endpoints (must come BEFORE generic /{workspace_id} routes)
 
 @router.get("/{workspace_id}/members", response_model=List[MemberResponse])
 def list_workspace_members(
@@ -263,7 +188,7 @@ def remove_member(
     return None
 
 
-# Invitation Management Endpoints
+# Invitation Management Endpoints (must come BEFORE generic /{workspace_id} routes)
 
 @router.post("/{workspace_id}/invitations", response_model=InvitationResponse, status_code=status.HTTP_201_CREATED)
 def invite_member(
@@ -392,4 +317,81 @@ def revoke_invitation(
         )
 
     crud_invitation.revoke_invitation(db, invitation=invitation)
+    return None
+
+
+# Generic Workspace CRUD Endpoints (must come AFTER specific routes)
+
+@router.get("/{workspace_id}", response_model=WorkspaceResponse)
+def get_workspace(
+    workspace_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get workspace details"""
+    workspace = crud_workspace.get_by_id(db, workspace_id=workspace_id)
+    if not workspace:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workspace not found"
+        )
+
+    # Check if user is a member
+    if not crud_workspace.is_member(db, workspace_id=workspace_id, user_id=current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not a member of this workspace"
+        )
+
+    return workspace
+
+
+@router.patch("/{workspace_id}", response_model=WorkspaceResponse)
+def update_workspace(
+    workspace_id: UUID,
+    workspace_in: WorkspaceUpdate,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Update workspace"""
+    workspace = crud_workspace.get_by_id(db, workspace_id=workspace_id)
+    if not workspace:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workspace not found"
+        )
+
+    # Check if user is a member
+    if not crud_workspace.is_member(db, workspace_id=workspace_id, user_id=current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not a member of this workspace"
+        )
+
+    updated_workspace = crud_workspace.update(db, workspace=workspace, workspace_in=workspace_in)
+    return updated_workspace
+
+
+@router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_workspace(
+    workspace_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Delete workspace (owner only)"""
+    workspace = crud_workspace.get_by_id(db, workspace_id=workspace_id)
+    if not workspace:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workspace not found"
+        )
+
+    # Check if user is the owner
+    if workspace.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the owner can delete the workspace"
+        )
+
+    crud_workspace.delete(db, workspace=workspace)
     return None
