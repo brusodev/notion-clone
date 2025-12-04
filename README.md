@@ -17,7 +17,8 @@ Aplicação web full-stack que replica as funcionalidades principais do Notion, 
 - ✅ Páginas hierárquicas ilimitadas
 - ✅ Blocos de conteúdo flexíveis (JSON)
 - ✅ Sistema de roles (OWNER, EDITOR, VIEWER)
-- ✅ API RESTful completa (35 endpoints)
+- ✅ Busca full-text com PostgreSQL FTS
+- ✅ API RESTful completa (36 endpoints)
 - 🚧 Edição em tempo real (planejado)
 - 🚧 Databases/Tables (planejado)
 
@@ -40,7 +41,7 @@ Aplicação web full-stack que replica as funcionalidades principais do Notion, 
 
 | Métrica | Status |
 |---------|--------|
-| **Endpoints Implementados** | 35 |
+| **Endpoints Implementados** | 36 |
 | **Testes Passando** | 8/12 (66.7%) |
 | **Deploy** | ✅ Railway |
 | **Banco de Dados** | ✅ PostgreSQL |
@@ -136,6 +137,20 @@ notion-clone/
 - [x] Deletar blocos com cascade
 - [x] Listagem ordenada de blocos
 
+### 🔍 Busca Full-Text
+- [x] Busca em títulos de páginas
+- [x] Busca em conteúdo de blocos (JSON)
+- [x] Suporte a idioma português (stemming)
+- [x] Ranking por relevância (título > conteúdo)
+- [x] Highlights com tags `<mark>`
+- [x] Filtros por tipo de conteúdo
+- [x] Filtros de páginas arquivadas
+- [x] Paginação (limit/offset)
+- [x] PostgreSQL FTS nativo (tsvector/tsquery)
+- [x] Índices GIN para performance
+- [x] Fallback SQLite para desenvolvimento
+- [x] Métricas de tempo de execução
+
 ### 🛠️ Infraestrutura
 - [x] API RESTful completa
 - [x] Documentação OpenAPI/Swagger
@@ -156,7 +171,7 @@ notion-clone/
 ### **Fase 1: Core Collaboration** 🎯 Em Andamento
 - [x] ✅ **Gerenciamento de membros** (convidar, remover, alterar roles)
 - [x] ✅ **Sistema de convites por email** com tokens seguros
-- [ ] Busca full-text (Elasticsearch/PostgreSQL FTS)
+- [x] ✅ **Busca full-text** (PostgreSQL FTS com português)
 - [ ] Upload de arquivos e imagens (S3)
 - [ ] Sistema de comentários
 
@@ -245,13 +260,18 @@ notion-clone/
 | PATCH | `/{id}/move` | Mover bloco | ✅ |
 | DELETE | `/{id}` | Deletar bloco | ✅ |
 
+### Busca (`/api/v1/search`) - 1 endpoint
+| Método | Endpoint | Descrição | Auth |
+|--------|----------|-----------|------|
+| POST | `/` | Busca full-text em páginas e blocos | ✅ |
+
 ### Utilitários - 2 endpoints
 | Método | Endpoint | Descrição | Auth |
 |--------|----------|-----------|------|
 | GET | `/health` | Health check | ❌ |
 | GET | `/` | Info da API | ❌ |
 
-**Total: 32 endpoints principais + 3 adicionais = 35 endpoints funcionais**
+**Total: 33 endpoints principais + 3 adicionais = 36 endpoints funcionais**
 
 ---
 
