@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from redis import Redis
 import logging
 from app.core.config import settings
+from app.core.database import Base, engine
 from app.api.v1 import auth, workspaces, pages, blocks
 
 # Configure logging
@@ -27,6 +28,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Startup event: Create database tables
+@app.on_event("startup")
+async def startup_event():
+    """Create database tables on startup"""
+    logger.info("=" * 60)
+    logger.info("Starting Notion Clone API")
+    logger.info("=" * 60)
+
+    try:
+        logger.info("Creating database tables...")
+        # Import all models to ensure they are registered with Base.metadata
+        from app.models import user, workspace, workspace_member, page, block
+        Base.metadata.create_all(bind=engine)
+        logger.info("✓ Database tables created successfully!")
+    except Exception as e:
+        logger.error(f"✗ Error creating tables: {e}")
+        raise
+
+    logger.info("=" * 60)
 
 # Initialize Redis client for token blacklist
 try:
