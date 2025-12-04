@@ -10,7 +10,7 @@ from app.crud import user as crud_user
 from app.crud import workspace as crud_workspace
 from app.schemas.user import UserCreate, UserUpdate, UserResponse
 from app.schemas.workspace import WorkspaceCreate
-from app.schemas.token import Token
+from app.schemas.token import Token, RefreshTokenRequest, LogoutRequest
 
 router = APIRouter()
 
@@ -77,31 +77,33 @@ def login(
 
 @router.post("/refresh", response_model=Token)
 def refresh(
-    refresh_token: str,
+    request: RefreshTokenRequest,
     db: Session = Depends(get_db)
 ):
     """Refresh access token"""
+    refresh_token = request.refresh_token
+
     # Check if token is blacklisted
     if redis_client and redis_client.exists(f"blacklist:{refresh_token}"):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has been revoked"
         )
-    
+
     payload = decode_token(refresh_token)
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token"
         )
-    
+
     # Check token type
     if payload.get("type") != "refresh":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token type"
         )
-    
+
     user_id = payload.get("sub")
     user = crud_user.get_by_id(db, user_id=user_id)
     if not user:
@@ -109,16 +111,21 @@ def refresh(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found"
         )
-    
+
     # Create new access token
     new_access_token = create_access_token({"sub": str(user.id), "email": user.email})
-    
+
     return Token(access_token=new_access_token, refresh_token=refresh_token)
 
 
-@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout(refresh_token: str):
+@router.post("/logout", status_code=status.HTTP_200_OK)
+def logout(
+    request: LogoutRequest,
+    current_user: UserResponse = Depends(get_current_active_user)
+):
     """Logout by blacklisting refresh token"""
+    refresh_token = request.refresh_token
+
     if redis_client:
         # Store token in blacklist with expiry (7 days)
         redis_client.setex(

@@ -12,3 +12,11 @@ class TokenPayload(BaseModel):
     email: str
     exp: int
     type: str  # 'access' or 'refresh'
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: str
