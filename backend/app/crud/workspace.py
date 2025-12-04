@@ -73,3 +73,38 @@ def get_user_role(db: Session, workspace_id: UUID, user_id: UUID) -> Optional[Wo
         WorkspaceMember.user_id == user_id
     ).first()
     return member.role if member else None
+
+
+# Member Management Functions
+
+def get_members(db: Session, workspace_id: UUID) -> List[WorkspaceMember]:
+    """Get all members of a workspace"""
+    return db.query(WorkspaceMember).filter(
+        WorkspaceMember.workspace_id == workspace_id
+    ).all()
+
+
+def get_member(db: Session, workspace_id: UUID, user_id: UUID) -> Optional[WorkspaceMember]:
+    """Get a specific workspace member"""
+    return db.query(WorkspaceMember).filter(
+        WorkspaceMember.workspace_id == workspace_id,
+        WorkspaceMember.user_id == user_id
+    ).first()
+
+
+def update_member_role(
+    db: Session,
+    member: WorkspaceMember,
+    new_role: WorkspaceRole
+) -> WorkspaceMember:
+    """Update a member's role in workspace"""
+    member.role = new_role
+    db.commit()
+    db.refresh(member)
+    return member
+
+
+def remove_member(db: Session, member: WorkspaceMember) -> None:
+    """Remove a member from workspace"""
+    db.delete(member)
+    db.commit()

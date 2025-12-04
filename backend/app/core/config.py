@@ -22,7 +22,10 @@ class Settings(BaseSettings):
     
     # CORS
     ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
-    
+
+    # Frontend URL (for invitation links)
+    FRONTEND_URL: str = "http://localhost:3000"
+
     # Email (futuro)
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
