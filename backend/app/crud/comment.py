@@ -8,6 +8,7 @@ import re
 from app.models.comment import Comment
 from app.models.comment_mention import CommentMention
 from app.models.comment_reaction import CommentReaction
+from app.models.comment_attachment import CommentAttachment
 from app.models.workspace_member import WorkspaceMember
 from app.schemas.comment import CommentCreate, CommentUpdate, ReactionSummary
 
@@ -114,7 +115,7 @@ def get_by_id(
         joinedload(Comment.deleted_by_user),
         selectinload(Comment.reactions).joinedload(CommentReaction.user),
         selectinload(Comment.mentions).joinedload(CommentMention.mentioned_user),
-        selectinload(Comment.attachments).joinedload('uploader')
+        selectinload(Comment.attachments).joinedload(CommentAttachment.uploader)
     ).filter(Comment.id == comment_id)
 
     if not include_deleted:
@@ -152,7 +153,7 @@ def get_by_page(
         joinedload(Comment.deleted_by_user),
         selectinload(Comment.reactions).joinedload(CommentReaction.user),
         selectinload(Comment.mentions).joinedload(CommentMention.mentioned_user),
-        selectinload(Comment.attachments).joinedload('uploader'),
+        selectinload(Comment.attachments).joinedload(CommentAttachment.uploader),
         selectinload(Comment.replies).joinedload(Comment.author)  # Load first-level replies
     ).order_by(Comment.created_at.desc()).offset(offset).limit(limit).all()
 
@@ -188,7 +189,7 @@ def get_by_block(
         joinedload(Comment.deleted_by_user),
         selectinload(Comment.reactions).joinedload(CommentReaction.user),
         selectinload(Comment.mentions).joinedload(CommentMention.mentioned_user),
-        selectinload(Comment.attachments).joinedload('uploader'),
+        selectinload(Comment.attachments).joinedload(CommentAttachment.uploader),
         selectinload(Comment.replies).joinedload(Comment.author)  # Load first-level replies
     ).order_by(Comment.created_at.desc()).offset(offset).limit(limit).all()
 
