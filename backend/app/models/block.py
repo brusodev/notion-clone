@@ -22,3 +22,4 @@ class Block(Base):
     page = relationship("Page", back_populates="blocks")
     parent_block = relationship("Block", remote_side=[id], back_populates="child_blocks")
     child_blocks = relationship("Block", back_populates="parent_block", cascade="all, delete-orphan")
+    comments = relationship("Comment", back_populates="block", cascade="all, delete-orphan")

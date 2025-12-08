@@ -22,3 +22,8 @@ class User(Base):
     workspaces_owned = relationship("Workspace", back_populates="owner", cascade="all, delete-orphan")
     workspace_memberships = relationship("WorkspaceMember", back_populates="user", cascade="all, delete-orphan")
     pages_created = relationship("Page", back_populates="creator")
+    comments_authored = relationship("Comment", foreign_keys="Comment.author_id", back_populates="author")
+    comments_deleted = relationship("Comment", foreign_keys="Comment.deleted_by", back_populates="deleted_by_user")
+    comment_reactions = relationship("CommentReaction", back_populates="user")
+    comment_mentions_received = relationship("CommentMention", back_populates="mentioned_user")
+    comment_attachments_uploaded = relationship("CommentAttachment", back_populates="uploader")
