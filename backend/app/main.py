@@ -4,7 +4,7 @@ from redis import Redis
 import logging
 from app.core.config import settings
 from app.core.database import Base, engine
-from app.api.v1 import auth, workspaces, pages, blocks, invitations, search
+from app.api.v1 import auth, workspaces, pages, blocks, invitations, search, comments
 
 # Configure logging
 logging.basicConfig(
@@ -40,7 +40,10 @@ async def startup_event():
     try:
         logger.info("Creating database tables...")
         # Import all models to ensure they are registered with Base.metadata
-        from app.models import user, workspace, workspace_member, page, block, invitation
+        from app.models import (
+            user, workspace, workspace_member, page, block, invitation,
+            comment, comment_reaction, comment_mention, comment_attachment
+        )
         Base.metadata.create_all(bind=engine)
         logger.info("✓ Database tables created successfully!")
     except Exception as e:
@@ -66,6 +69,7 @@ app.include_router(pages.router, prefix=f"{settings.API_V1_STR}/pages", tags=["p
 app.include_router(blocks.router, prefix=f"{settings.API_V1_STR}/blocks", tags=["blocks"])
 app.include_router(invitations.router, prefix=f"{settings.API_V1_STR}/invitations", tags=["invitations"])
 app.include_router(search.router, prefix=f"{settings.API_V1_STR}/search", tags=["search"])
+app.include_router(comments.router, prefix=f"{settings.API_V1_STR}/comments", tags=["comments"])
 
 
 @app.get("/health")
