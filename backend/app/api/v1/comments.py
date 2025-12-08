@@ -6,6 +6,7 @@ from uuid import UUID
 from app.api.deps import get_db, get_current_active_user
 from app.crud import comment as crud_comment
 from app.crud import comment_reaction as crud_reaction
+from app.crud import comment_attachment as crud_attachment
 from app.crud import workspace as crud_workspace
 from app.crud import page as crud_page
 from app.crud import block as crud_block
@@ -17,6 +18,8 @@ from app.schemas.comment import (
     CommentListResponse,
     ReactionCreate,
     ReactionResponse,
+    AttachmentCreate,
+    AttachmentResponse,
     UserBasic,
     ReactionSummary,
 )
@@ -116,7 +119,7 @@ def _build_comment_response(
         "deleted_by_user": UserBasic.model_validate(comment.deleted_by_user) if comment.deleted_by_user else None,
         "reactions": reactions,
         "mentioned_users": [UserBasic.model_validate(m.mentioned_user) for m in comment.mentions if m.mentioned_user],
-        "attachments": [],  # TODO: Implement in Phase 5
+        "attachments": [AttachmentResponse.model_validate(a) for a in comment.attachments] if comment.attachments else [],
         "replies_count": replies_count,
     }
 
@@ -137,8 +140,8 @@ def create_comment(
     Create a new comment on a page or block.
     Automatically parses @mentions and calculates thread depth.
     """
-    # Check workspace access
-    _check_workspace_access(
+    # Check workspace access and get workspace_id
+    workspace_id = _check_workspace_access(
         db,
         user_id=current_user.id,
         page_id=comment_in.page_id,
@@ -160,12 +163,13 @@ def create_comment(
                 detail="Parent comment must be on the same page/block"
             )
 
-    # Create comment
+    # Create comment with workspace validation for mentions
     try:
         comment = crud_comment.create(
             db,
             comment_in=comment_in,
-            author_id=current_user.id
+            author_id=current_user.id,
+            workspace_id=workspace_id
         )
     except ValueError as e:
         # Max depth reached
@@ -467,4 +471,103 @@ def remove_reaction(
             detail="Reaction not found"
         )
 
+    return None
+
+
+# ============================================================================
+# Attachment Endpoints
+# ============================================================================
+
+@router.post("/{comment_id}/attachments", response_model=AttachmentResponse, status_code=status.HTTP_201_CREATED)
+def add_attachment(
+    comment_id: UUID,
+    attachment_in: AttachmentCreate,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Add an attachment to a comment.
+    MVP: Only stores metadata (URLs). File upload integration with S3 can be added later.
+    """
+    comment = crud_comment.get_by_id(db, comment_id=comment_id)
+    if not comment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Comment not found"
+        )
+
+    # Check workspace access
+    _check_workspace_access(
+        db,
+        user_id=current_user.id,
+        page_id=comment.page_id,
+        block_id=comment.block_id
+    )
+
+    # Create attachment
+    attachment = crud_attachment.create(
+        db,
+        comment_id=comment_id,
+        attachment_in=attachment_in,
+        uploaded_by=current_user.id
+    )
+
+    return AttachmentResponse.model_validate(attachment)
+
+
+@router.delete("/{comment_id}/attachments/{attachment_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_attachment(
+    comment_id: UUID,
+    attachment_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete an attachment from a comment.
+    Only the uploader or workspace owner can delete.
+    """
+    comment = crud_comment.get_by_id(db, comment_id=comment_id)
+    if not comment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Comment not found"
+        )
+
+    attachment = crud_attachment.get_by_id(db, attachment_id=attachment_id)
+    if not attachment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Attachment not found"
+        )
+
+    # Verify attachment belongs to comment
+    if attachment.comment_id != comment_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Attachment does not belong to this comment"
+        )
+
+    # Check workspace access
+    workspace_id = _check_workspace_access(
+        db,
+        user_id=current_user.id,
+        page_id=comment.page_id,
+        block_id=comment.block_id
+    )
+
+    # Get user role
+    user_role = crud_workspace.get_user_role(
+        db,
+        workspace_id=workspace_id,
+        user_id=current_user.id
+    )
+
+    # Only uploader or owner can delete
+    if attachment.uploaded_by != current_user.id and user_role != WorkspaceRole.OWNER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the uploader or workspace owner can delete this attachment"
+        )
+
+    crud_attachment.delete(db, attachment=attachment)
     return None

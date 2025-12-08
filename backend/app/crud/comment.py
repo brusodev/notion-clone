@@ -8,6 +8,7 @@ import re
 from app.models.comment import Comment
 from app.models.comment_mention import CommentMention
 from app.models.comment_reaction import CommentReaction
+from app.models.workspace_member import WorkspaceMember
 from app.schemas.comment import CommentCreate, CommentUpdate, ReactionSummary
 
 
@@ -50,9 +51,10 @@ def _calculate_thread_depth(db: Session, parent_comment_id: Optional[UUID]) -> i
     return min(parent.thread_depth + 1, 5)
 
 
-def create(db: Session, comment_in: CommentCreate, author_id: UUID) -> Comment:
+def create(db: Session, comment_in: CommentCreate, author_id: UUID, workspace_id: UUID) -> Comment:
     """
     Create a new comment with automatic thread_depth calculation and mention parsing.
+    Validates that mentioned users are members of the workspace.
     """
     # Calculate thread depth
     thread_depth = _calculate_thread_depth(db, comment_in.parent_comment_id)
@@ -76,7 +78,18 @@ def create(db: Session, comment_in: CommentCreate, author_id: UUID) -> Comment:
 
     # Parse and create mentions
     mentioned_user_ids = _parse_mentions(comment_in.content)
+
+    # Validate that mentioned users are workspace members
     for user_id in mentioned_user_ids:
+        is_member = db.query(WorkspaceMember).filter(
+            WorkspaceMember.workspace_id == workspace_id,
+            WorkspaceMember.user_id == user_id
+        ).first() is not None
+
+        if not is_member:
+            # Skip invalid mentions (user not in workspace)
+            continue
+
         mention = CommentMention(
             comment_id=comment.id,
             mentioned_user_id=user_id
