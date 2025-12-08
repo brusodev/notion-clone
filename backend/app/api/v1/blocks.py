@@ -78,6 +78,38 @@ def list_blocks(
     return blocks
 
 
+@router.get("/{block_id}", response_model=BlockResponse)
+def get_block(
+    block_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get block by ID"""
+    block = crud_block.get_by_id(db, block_id=block_id)
+    if not block:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Block not found"
+        )
+
+    # Get the page
+    page = crud_page.get_by_id(db, page_id=block.page_id)
+    if not page:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Page not found"
+        )
+
+    # Check if user is a member of the workspace
+    if not crud_workspace.is_member(db, workspace_id=page.workspace_id, user_id=current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not a member of this workspace"
+        )
+
+    return block
+
+
 @router.patch("/{block_id}", response_model=BlockResponse)
 def update_block(
     block_id: UUID,
@@ -92,7 +124,7 @@ def update_block(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Block not found"
         )
-    
+
     # Get the page
     page = crud_page.get_by_id(db, page_id=block.page_id)
     if not page:
@@ -100,14 +132,14 @@ def update_block(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Page not found"
         )
-    
+
     # Check if user is a member of the workspace
     if not crud_workspace.is_member(db, workspace_id=page.workspace_id, user_id=current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not a member of this workspace"
         )
-    
+
     updated_block = crud_block.update(db, block=block, block_in=block_in)
     return updated_block
 
