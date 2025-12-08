@@ -113,9 +113,9 @@ def get_by_id(
     query = db.query(Comment).options(
         joinedload(Comment.author),
         joinedload(Comment.deleted_by_user),
-        selectinload(Comment.reactions).joinedload(CommentReaction.user),
-        selectinload(Comment.mentions).joinedload(CommentMention.mentioned_user),
-        selectinload(Comment.attachments).joinedload(CommentAttachment.uploader)
+        selectinload(Comment.reactions),
+        selectinload(Comment.mentions),
+        selectinload(Comment.attachments)
     ).filter(Comment.id == comment_id)
 
     if not include_deleted:
@@ -151,10 +151,10 @@ def get_by_page(
     comments = base_query.options(
         joinedload(Comment.author),
         joinedload(Comment.deleted_by_user),
-        selectinload(Comment.reactions).joinedload(CommentReaction.user),
-        selectinload(Comment.mentions).joinedload(CommentMention.mentioned_user),
-        selectinload(Comment.attachments).joinedload(CommentAttachment.uploader),
-        selectinload(Comment.replies).joinedload(Comment.author)  # Load first-level replies
+        selectinload(Comment.reactions),
+        selectinload(Comment.mentions),
+        selectinload(Comment.attachments),
+        selectinload(Comment.replies)  # Load first-level replies
     ).order_by(Comment.created_at.desc()).offset(offset).limit(limit).all()
 
     return comments, total
@@ -187,10 +187,10 @@ def get_by_block(
     comments = base_query.options(
         joinedload(Comment.author),
         joinedload(Comment.deleted_by_user),
-        selectinload(Comment.reactions).joinedload(CommentReaction.user),
-        selectinload(Comment.mentions).joinedload(CommentMention.mentioned_user),
-        selectinload(Comment.attachments).joinedload(CommentAttachment.uploader),
-        selectinload(Comment.replies).joinedload(Comment.author)  # Load first-level replies
+        selectinload(Comment.reactions),
+        selectinload(Comment.mentions),
+        selectinload(Comment.attachments),
+        selectinload(Comment.replies)  # Load first-level replies
     ).order_by(Comment.created_at.desc()).offset(offset).limit(limit).all()
 
     return comments, total
