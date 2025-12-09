@@ -38,16 +38,17 @@ async def startup_event():
     logger.info("=" * 60)
 
     try:
-        logger.info("Creating database tables...")
+        logger.info("Initializing models...")
         # Import all models to ensure they are registered with Base.metadata
         from app.models import (
-            user, workspace, workspace_member, page, block, invitation,
+            user, workspace, workspace_member, page, page_version, block, invitation,
             comment, comment_reaction, comment_mention, comment_attachment
         )
-        Base.metadata.create_all(bind=engine)
-        logger.info("✓ Database tables created successfully!")
+        # Note: Using Alembic migrations instead of create_all for better control
+        # Base.metadata.create_all(bind=engine)
+        logger.info("✓ Models initialized successfully!")
     except Exception as e:
-        logger.error(f"✗ Error creating tables: {e}")
+        logger.error(f"✗ Error initializing models: {e}")
         raise
 
     logger.info("=" * 60)

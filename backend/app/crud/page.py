@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 from app.models.page import Page
 from app.models.block import Block
 from app.schemas.page import PageCreate, PageUpdate, PageMove
+from app.crud import page_version as crud_page_version
 
 
 def create(db: Session, page_in: PageCreate, created_by: UUID) -> Page:
@@ -46,11 +47,35 @@ def get_tree(db: Session, workspace_id: UUID, parent_id: Optional[UUID] = None) 
     return query.order_by(Page.order).all()
 
 
-def update(db: Session, page: Page, page_in: PageUpdate) -> Page:
-    """Update page"""
+def update(
+    db: Session,
+    page: Page,
+    page_in: PageUpdate,
+    created_by: Optional[UUID] = None,
+    change_summary: Optional[str] = None,
+    create_version: bool = True
+) -> Page:
+    """Update page and optionally create a version snapshot"""
     update_data = page_in.model_dump(exclude_unset=True)
+
+    # Create version before updating if requested and user provided
+    if create_version and created_by and update_data:
+        # Check if there are significant changes (title, icon, cover_image)
+        significant_fields = {'title', 'icon', 'cover_image'}
+        has_significant_changes = any(field in update_data for field in significant_fields)
+
+        if has_significant_changes:
+            crud_page_version.create_version(
+                db=db,
+                page=page,
+                created_by=created_by,
+                change_summary=change_summary
+            )
+
+    # Update page fields
     for field, value in update_data.items():
         setattr(page, field, value)
+
     db.commit()
     db.refresh(page)
     return page

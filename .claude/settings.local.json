@@ -20,7 +20,11 @@
       "Bash(alembic stamp:*)",
       "Bash(pip install:*)",
       "Bash(PYTHONIOENCODING=utf-8 python:*)",
-      "Bash(alembic downgrade:*)"
+      "Bash(alembic downgrade:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(timeout 10 python:*)"
     ],
     "deny": [],
     "ask": []

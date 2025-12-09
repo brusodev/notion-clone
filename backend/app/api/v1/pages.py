@@ -5,7 +5,9 @@ from uuid import UUID
 from app.api.deps import get_db, get_current_active_user
 from app.crud import page as crud_page
 from app.crud import workspace as crud_workspace
+from app.crud import page_version as crud_page_version
 from app.schemas.page import PageCreate, PageUpdate, PageMove, PageResponse, PageWithBlocks, PageTree
+from app.schemas.page_version import PageVersionResponse, PageVersionListItem
 from app.models.user import User
 
 router = APIRouter()
@@ -133,25 +135,32 @@ def get_page(
 def update_page(
     page_id: UUID,
     page_in: PageUpdate,
+    change_summary: Optional[str] = Query(None, description="Summary of changes for version history"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Update page metadata"""
+    """Update page metadata (automatically creates a version if significant changes)"""
     page = crud_page.get_by_id(db, page_id=page_id)
     if not page:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Page not found"
         )
-    
+
     # Check if user is a member of the workspace
     if not crud_workspace.is_member(db, workspace_id=page.workspace_id, user_id=current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not a member of this workspace"
         )
-    
-    updated_page = crud_page.update(db, page=page, page_in=page_in)
+
+    updated_page = crud_page.update(
+        db,
+        page=page,
+        page_in=page_in,
+        created_by=current_user.id,
+        change_summary=change_summary
+    )
     return updated_page
 
 
@@ -320,3 +329,161 @@ def duplicate_page(
         include_blocks=include_blocks
     )
     return duplicated_page
+
+
+@router.get("/{page_id}/versions", response_model=List[PageVersionListItem])
+def list_page_versions(
+    page_id: UUID,
+    limit: int = Query(50, ge=1, le=100, description="Maximum number of versions to return"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """List all versions of a page"""
+    page = crud_page.get_by_id(db, page_id=page_id)
+    if not page:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Page not found"
+        )
+
+    # Check if user is a member of the workspace
+    if not crud_workspace.is_member(db, workspace_id=page.workspace_id, user_id=current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not a member of this workspace"
+        )
+
+    versions = crud_page_version.get_versions(db, page_id=page_id, limit=limit)
+
+    # Convert to PageVersionListItem with blocks_count
+    result = []
+    for version in versions:
+        version_data = {
+            "id": version.id,
+            "version_number": version.version_number,
+            "title": version.title,
+            "created_at": version.created_at,
+            "created_by": version.created_by,
+            "change_summary": version.change_summary,
+            "blocks_count": len(version.content_snapshot)
+        }
+        result.append(PageVersionListItem(**version_data))
+
+    return result
+
+
+@router.get("/{page_id}/versions/{version_number}", response_model=PageVersionResponse)
+def get_page_version(
+    page_id: UUID,
+    version_number: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get a specific version of a page"""
+    page = crud_page.get_by_id(db, page_id=page_id)
+    if not page:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Page not found"
+        )
+
+    # Check if user is a member of the workspace
+    if not crud_workspace.is_member(db, workspace_id=page.workspace_id, user_id=current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not a member of this workspace"
+        )
+
+    version = crud_page_version.get_version(db, page_id=page_id, version_number=version_number)
+    if not version:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Version not found"
+        )
+
+    return version
+
+
+@router.post("/{page_id}/versions/{version_number}/restore", response_model=PageResponse)
+def restore_page_version(
+    page_id: UUID,
+    version_number: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Restore a page to a specific version"""
+    page = crud_page.get_by_id(db, page_id=page_id)
+    if not page:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Page not found"
+        )
+
+    # Check if user is a member of the workspace
+    if not crud_workspace.is_member(db, workspace_id=page.workspace_id, user_id=current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not a member of this workspace"
+        )
+
+    version = crud_page_version.get_version(db, page_id=page_id, version_number=version_number)
+    if not version:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Version not found"
+        )
+
+    # Create a new version before restoring (to preserve current state)
+    crud_page_version.create_version(
+        db=db,
+        page=page,
+        created_by=current_user.id,
+        change_summary=f"Before restoring to version {version_number}"
+    )
+
+    # Restore page metadata
+    page.title = version.title
+    page.icon = version.icon
+    page.cover_image = version.cover_image
+
+    # Delete current blocks
+    from app.models.block import Block
+    db.query(Block).filter(Block.page_id == page_id).delete()
+
+    # Restore blocks from snapshot
+    block_id_map = {}  # Map old IDs to new IDs for parent_block_id references
+
+    for block_data in version.content_snapshot:
+        from uuid import uuid4
+        old_id = UUID(block_data["id"])
+        new_id = uuid4()
+        block_id_map[old_id] = new_id
+
+        new_block = Block(
+            id=new_id,
+            page_id=page_id,
+            type=block_data["type"],
+            content=block_data["content"],
+            order=block_data["order"],
+            parent_block_id=None  # Will be set in second pass
+        )
+        db.add(new_block)
+
+    db.flush()
+
+    # Second pass: restore parent_block_id references
+    for block_data in version.content_snapshot:
+        if block_data.get("parent_block_id"):
+            old_id = UUID(block_data["id"])
+            old_parent_id = UUID(block_data["parent_block_id"])
+            new_id = block_id_map.get(old_id)
+            new_parent_id = block_id_map.get(old_parent_id)
+
+            if new_id and new_parent_id:
+                block = db.query(Block).filter(Block.id == new_id).first()
+                if block:
+                    block.parent_block_id = new_parent_id
+
+    db.commit()
+    db.refresh(page)
+    return page
