@@ -1,0 +1,124 @@
+{
+  "summary": {
+    "total": 14,
+    "passed": 7,
+    "failed": 7,
+    "skipped": 0,
+    "success_rate": 50.0,
+    "timestamp": "2025-12-05T08:15:52.430264"
+  },
+  "results": [
+    {
+      "endpoint": "/health",
+      "method": "GET",
+      "status": "FAIL",
+      "response_code": null,
+      "message": "HTTPSConnectionPool(host='notion-clone-production-b81a.up.railway.app', port=443): Max retries exceeded with url: /health (Caused by ConnectTimeoutError(<urllib3.connection.HTTPSConnection object at 0x0000012AE51C99A0>, 'Connection to notion-clone-production-b81a.up.railway.app timed out. (connect timeout=10)'))",
+      "timestamp": "2025-12-05T08:15:44.207124"
+    },
+    {
+      "endpoint": "/",
+      "method": "GET",
+      "status": "PASS",
+      "response_code": 200,
+      "message": "",
+      "timestamp": "2025-12-05T08:15:44.678303"
+    },
+    {
+      "endpoint": "/api/v1/auth/register",
+      "method": "POST",
+      "status": "PASS",
+      "response_code": 201,
+      "message": "Usuário criado: None",
+      "timestamp": "2025-12-05T08:15:45.672294"
+    },
+    {
+      "endpoint": "/api/v1/auth/login",
+      "method": "POST",
+      "status": "PASS",
+      "response_code": 200,
+      "message": "Tokens obtidos com sucesso",
+      "timestamp": "2025-12-05T08:15:46.489171"
+    },
+    {
+      "endpoint": "/api/v1/auth/me",
+      "method": "GET",
+      "status": "PASS",
+      "response_code": 200,
+      "message": "",
+      "timestamp": "2025-12-05T08:15:46.955335"
+    },
+    {
+      "endpoint": "/api/v1/auth/me",
+      "method": "PATCH",
+      "status": "PASS",
+      "response_code": 200,
+      "message": "Perfil atualizado",
+      "timestamp": "2025-12-05T08:15:47.377259"
+    },
+    {
+      "endpoint": "/api/v1/auth/refresh",
+      "method": "POST",
+      "status": "PASS",
+      "response_code": 200,
+      "message": "Token renovado",
+      "timestamp": "2025-12-05T08:15:47.788302"
+    },
+    {
+      "endpoint": "/api/v1/workspaces",
+      "method": "GET",
+      "status": "FAIL",
+      "response_code": 401,
+      "message": "",
+      "timestamp": "2025-12-05T08:15:48.592639"
+    },
+    {
+      "endpoint": "/api/v1/workspaces",
+      "method": "POST",
+      "status": "FAIL",
+      "response_code": 401,
+      "message": "{\"detail\":\"Not authenticated\"}",
+      "timestamp": "2025-12-05T08:15:49.423877"
+    },
+    {
+      "endpoint": "/api/v1/pages",
+      "method": "POST",
+      "status": "FAIL",
+      "response_code": 401,
+      "message": "{\"detail\":\"Not authenticated\"}",
+      "timestamp": "2025-12-05T08:15:50.253949"
+    },
+    {
+      "endpoint": "/api/v1/blocks",
+      "method": "POST",
+      "status": "FAIL",
+      "response_code": 405,
+      "message": "{\"detail\":\"Method Not Allowed\"}",
+      "timestamp": "2025-12-05T08:15:51.064652"
+    },
+    {
+      "endpoint": "/api/v1/search/",
+      "method": "POST",
+      "status": "FAIL",
+      "response_code": 422,
+      "message": "",
+      "timestamp": "2025-12-05T08:15:51.558105"
+    },
+    {
+      "endpoint": "/api/v1/search/ (filtro)",
+      "method": "POST",
+      "status": "FAIL",
+      "response_code": 422,
+      "message": "",
+      "timestamp": "2025-12-05T08:15:51.998947"
+    },
+    {
+      "endpoint": "/api/v1/auth/logout",
+      "method": "POST",
+      "status": "PASS",
+      "response_code": 200,
+      "message": "Logout realizado",
+      "timestamp": "2025-12-05T08:15:52.427636"
+    }
+  ]
+}

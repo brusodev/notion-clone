@@ -23,6 +23,7 @@ class InvitationResponse(BaseModel):
     invitee_email: str
     role: str
     status: str
+    token: str  # Added for testing/development - allows accepting invitation
     expires_at: datetime
     created_at: datetime
     accepted_at: Optional[datetime] = None

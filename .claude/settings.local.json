@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(python test_api.py:*)",
+      "Bash($env:PYTHONIOENCODING=\"utf-8\")",
+      "Bash(curl:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(python:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwYmE5NzhkZi1kZWE0LTQzZWQtODY5NC1jZjgxYjkxMzc0NDQiLCJlbWFpbCI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiZXhwIjoxNzY0ODU2MTQxLCJ0eXBlIjoiYWNjZXNzIn0.9X0Tm4UJDOfsBNnlb2rcmj5z60fdOP6oSCd18AUDnkI\")",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiZDY2ZDMyMi1hNmRhLTQ3OWItYWI4NC1hYjQ1M2Q4MGJhMTEiLCJlbWFpbCI6ImZyZXNodGVzdDE3MzMzMTcxMDBAdGVzdC5jb20iLCJleHAiOjE3NjQ4NTYzOTEsInR5cGUiOiJhY2Nlc3MifQ.aU9HconXoeSXdYiV0BajrwvIpU3pdUB-mYW2X5n0EEE\")",
+      "Bash(WS_ID=\"a6b5abd3-0d78-4ee6-a61b-aa778a1c0582\")",
+      "Bash(cat:*)",
+      "Bash(alembic revision:*)",
+      "Bash(alembic upgrade:*)",
+      "Bash(alembic current:*)",
+      "Bash(alembic history:*)",
+      "Bash(alembic stamp:*)",
+      "Bash(pip install:*)",
+      "Bash(PYTHONIOENCODING=utf-8 python:*)",
+      "Bash(alembic downgrade:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -201,7 +201,7 @@ def test_workspaces():
     response = make_request("POST", f"/workspaces/{state['workspace_id']}/invitations", json=invite_data, headers=headers)
     if response and response.status_code == 201:
         data = response.json()
-        state["invitation_id"] = data["id"]
+        state["invitation_token"] = data["token"]  # Store token, not id
         print_test(f"Invite user to workspace: {data['invitee_email']}")
     else:
         print_error("Invite user failed", response)
@@ -209,7 +209,7 @@ def test_workspaces():
 
     # Test 2.6: Accept Invitation (User 2)
     headers2 = {"Authorization": f"Bearer {state['user2_token']}"}
-    accept_data = {"token": state["invitation_id"]}
+    accept_data = {"token": state["invitation_token"]}  # Use token
     response = make_request("POST", "/invitations/accept", json=accept_data, headers=headers2)
     if response and response.status_code == 200:
         print_test("Accept invitation")

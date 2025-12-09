@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import secrets
 from app.models.invitation import Invitation, InvitationStatus
 from app.models.workspace_member import WorkspaceMember, WorkspaceRole
@@ -28,7 +28,7 @@ def create(
         role=WorkspaceRole(invitation_in.role),
         token=generate_invitation_token(),
         status=InvitationStatus.PENDING,
-        expires_at=datetime.utcnow() + timedelta(days=expires_in_days)
+        expires_at=datetime.now(timezone.utc) + timedelta(days=expires_in_days)
     )
     db.add(invitation)
     db.commit()
@@ -75,7 +75,7 @@ def accept_invitation(
     """Accept an invitation and create workspace membership"""
     # Update invitation status
     invitation.status = InvitationStatus.ACCEPTED
-    invitation.accepted_at = datetime.utcnow()
+    invitation.accepted_at = datetime.now(timezone.utc)
 
     # Create workspace membership
     member = WorkspaceMember(
@@ -101,7 +101,7 @@ def is_valid(invitation: Invitation) -> bool:
     """Check if invitation is valid (pending and not expired)"""
     if invitation.status != InvitationStatus.PENDING:
         return False
-    if invitation.expires_at < datetime.utcnow():
+    if invitation.expires_at < datetime.now(timezone.utc):
         return False
     return True
 
@@ -110,7 +110,7 @@ def mark_expired_invitations(db: Session) -> int:
     """Mark all expired invitations as expired (utility function)"""
     expired_count = db.query(Invitation).filter(
         Invitation.status == InvitationStatus.PENDING,
-        Invitation.expires_at < datetime.utcnow()
+        Invitation.expires_at < datetime.now(timezone.utc)
     ).update({Invitation.status: InvitationStatus.EXPIRED})
     db.commit()
     return expired_count
