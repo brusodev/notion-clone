@@ -30,3 +30,4 @@ class Page(Base):
     creator = relationship("User", back_populates="pages_created")
     blocks = relationship("Block", back_populates="page", cascade="all, delete-orphan", order_by="Block.order")
     comments = relationship("Comment", back_populates="page", cascade="all, delete-orphan")
+    versions = relationship("PageVersion", back_populates="page", cascade="all, delete-orphan", order_by="PageVersion.version_number.desc()")

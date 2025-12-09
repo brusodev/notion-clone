@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
-from typing import List, Optional
-from uuid import UUID
+from typing import List, Optional, Dict
+from uuid import UUID, uuid4
 from app.models.page import Page
+from app.models.block import Block
 from app.schemas.page import PageCreate, PageUpdate, PageMove
 
 
@@ -72,7 +73,83 @@ def move(db: Session, page: Page, move_data: PageMove) -> Page:
     return page
 
 
+def get_archived(db: Session, workspace_id: UUID) -> List[Page]:
+    """Get all archived pages in a workspace (trash)"""
+    return db.query(Page).filter(
+        Page.workspace_id == workspace_id,
+        Page.is_archived == True
+    ).order_by(Page.updated_at.desc()).all()
+
+
+def restore(db: Session, page: Page) -> Page:
+    """Restore page from trash"""
+    page.is_archived = False
+    db.commit()
+    db.refresh(page)
+    return page
+
+
 def delete(db: Session, page: Page) -> None:
     """Permanently delete page"""
     db.delete(page)
     db.commit()
+
+
+def duplicate(db: Session, page: Page, created_by: UUID, include_blocks: bool = True) -> Page:
+    """Duplicate a page with all its blocks"""
+    # Create new page with copied attributes
+    new_page = Page(
+        workspace_id=page.workspace_id,
+        parent_id=page.parent_id,
+        title=f"{page.title} (Copy)",
+        icon=page.icon,
+        cover_image=page.cover_image,
+        is_archived=False,  # New copy should not be archived
+        is_public=False,    # New copy should not be public
+        order=page.order,
+        created_by=created_by
+    )
+    db.add(new_page)
+    db.flush()  # Get the new page ID
+
+    # Duplicate blocks if requested
+    if include_blocks:
+        # Get all blocks from original page
+        original_blocks = db.query(Block).filter(
+            Block.page_id == page.id
+        ).order_by(Block.order).all()
+
+        # Map old block IDs to new block IDs (for parent_block_id references)
+        block_id_mapping: Dict[UUID, UUID] = {}
+
+        # First pass: create all blocks with new IDs
+        for original_block in original_blocks:
+            new_block_id = uuid4()
+            block_id_mapping[original_block.id] = new_block_id
+
+            new_block = Block(
+                id=new_block_id,
+                page_id=new_page.id,
+                parent_block_id=None,  # Will be updated in second pass
+                type=original_block.type,
+                content=original_block.content.copy() if original_block.content else {},
+                order=original_block.order
+            )
+            db.add(new_block)
+
+        db.flush()
+
+        # Second pass: update parent_block_id references
+        for original_block in original_blocks:
+            if original_block.parent_block_id:
+                new_block_id = block_id_mapping[original_block.id]
+                new_parent_id = block_id_mapping.get(original_block.parent_block_id)
+
+                if new_parent_id:
+                    new_block = db.query(Block).filter(Block.id == new_block_id).first()
+                    if new_block:
+                        new_block.parent_block_id = new_parent_id
+
+    db.commit()
+    db.refresh(new_page)
+    return new_page

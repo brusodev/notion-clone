@@ -87,6 +87,24 @@ def get_page_tree(
     return build_tree()
 
 
+@router.get("/trash", response_model=List[PageResponse])
+def list_trash(
+    workspace_id: UUID = Query(..., description="Workspace ID"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """List all pages in trash (archived pages)"""
+    # Check if user is a member of the workspace
+    if not crud_workspace.is_member(db, workspace_id=workspace_id, user_id=current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not a member of this workspace"
+        )
+
+    archived_pages = crud_page.get_archived(db, workspace_id=workspace_id)
+    return archived_pages
+
+
 @router.get("/{page_id}", response_model=PageWithBlocks)
 def get_page(
     page_id: UUID,
@@ -176,14 +194,14 @@ def move_page(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Page not found"
         )
-    
+
     # Check if user is a member of the workspace
     if not crud_workspace.is_member(db, workspace_id=page.workspace_id, user_id=current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not a member of this workspace"
         )
-    
+
     # If new_parent_id is provided, verify it exists and belongs to same workspace
     if move_data.new_parent_id:
         new_parent = crud_page.get_by_id(db, page_id=move_data.new_parent_id)
@@ -203,6 +221,102 @@ def move_page(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Cannot move page to itself"
             )
-    
+
     moved_page = crud_page.move(db, page=page, move_data=move_data)
     return moved_page
+
+
+@router.post("/{page_id}/restore", response_model=PageResponse)
+def restore_page(
+    page_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Restore page from trash"""
+    page = crud_page.get_by_id(db, page_id=page_id)
+    if not page:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Page not found"
+        )
+
+    # Check if user is a member of the workspace
+    if not crud_workspace.is_member(db, workspace_id=page.workspace_id, user_id=current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not a member of this workspace"
+        )
+
+    # Check if page is actually archived
+    if not page.is_archived:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Page is not in trash"
+        )
+
+    restored_page = crud_page.restore(db, page=page)
+    return restored_page
+
+
+@router.delete("/{page_id}/permanent", status_code=status.HTTP_204_NO_CONTENT)
+def delete_page_permanently(
+    page_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Permanently delete page (cannot be undone)"""
+    page = crud_page.get_by_id(db, page_id=page_id)
+    if not page:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Page not found"
+        )
+
+    # Check if user is a member of the workspace
+    if not crud_workspace.is_member(db, workspace_id=page.workspace_id, user_id=current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not a member of this workspace"
+        )
+
+    # Optional: Only allow deletion if page is already archived
+    if not page.is_archived:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Page must be in trash before permanent deletion. Archive it first."
+        )
+
+    crud_page.delete(db, page=page)
+    return None
+
+
+@router.post("/{page_id}/duplicate", response_model=PageResponse, status_code=status.HTTP_201_CREATED)
+def duplicate_page(
+    page_id: UUID,
+    include_blocks: bool = Query(True, description="Include blocks in duplication"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Duplicate a page with all its blocks"""
+    page = crud_page.get_by_id(db, page_id=page_id)
+    if not page:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Page not found"
+        )
+
+    # Check if user is a member of the workspace
+    if not crud_workspace.is_member(db, workspace_id=page.workspace_id, user_id=current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not a member of this workspace"
+        )
+
+    # Duplicate the page
+    duplicated_page = crud_page.duplicate(
+        db,
+        page=page,
+        created_by=current_user.id,
+        include_blocks=include_blocks
+    )
+    return duplicated_page

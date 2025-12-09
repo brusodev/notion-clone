@@ -8,7 +8,7 @@ import json
 import time
 from typing import Dict, Any, Optional
 
-BASE_URL = "http://localhost:8001/api/v1"
+BASE_URL = "http://localhost:8000/api/v1"
 
 # Test data
 timestamp = int(time.time())
@@ -48,11 +48,12 @@ def print_test(message: str, passed: bool = True):
     status = "[OK]" if passed else "[FAIL]"
     print(f"{status} {message}")
 
-def print_error(message: str, response: requests.Response):
+def print_error(message: str, response: Optional[requests.Response]):
     """Print error details"""
     print(f"[ERROR] {message}")
-    print(f"  Status: {response.status_code}")
-    print(f"  Response: {response.text[:200]}")
+    if response:
+        print(f"  Status: {response.status_code}")
+        print(f"  Response: {response.text[:200]}")
 
 def make_request(method: str, endpoint: str, **kwargs) -> Optional[requests.Response]:
     """Make HTTP request with error handling"""
@@ -549,6 +550,108 @@ def test_comments():
     return True
 
 # =============================================================================
+# 7. TRASH/RESTORE TESTS
+# =============================================================================
+
+def test_trash():
+    """Test trash and restore endpoints"""
+    print_header("7. TRASH/RESTORE TESTS")
+
+    headers = {"Authorization": f"Bearer {state['user1_token']}"}
+
+    # Test 7.1: Create a page to be deleted
+    page_data = {
+        "title": "Page to be deleted",
+        "workspace_id": state["workspace_id"]
+    }
+    response = make_request("POST", "/pages/", json=page_data, headers=headers)
+    if response and response.status_code == 201:
+        data = response.json()
+        temp_page_id = data["id"]
+        print_test(f"Create temporary page: {data['title']}")
+    else:
+        print_error("Create temporary page failed", response)
+        return False
+
+    # Test 7.2: Archive the page (move to trash)
+    response = make_request("DELETE", f"/pages/{temp_page_id}", headers=headers)
+    if response and response.status_code == 204:
+        print_test("Archive page (move to trash)")
+    else:
+        print_error("Archive page failed", response)
+        return False
+
+    # Test 7.3: List trash - should include the archived page
+    response = make_request("GET", f"/pages/trash?workspace_id={state['workspace_id']}", headers=headers)
+    if response and response.status_code == 200:
+        data = response.json()
+        archived_count = len(data)
+        print_test(f"List trash: {archived_count} page(s) in trash")
+        # Verify our page is in trash
+        found = any(page['id'] == temp_page_id for page in data)
+        if not found:
+            print_error("Archived page not found in trash", response)
+            return False
+    else:
+        print_error("List trash failed", response)
+        return False
+
+    # Test 7.4: Try to restore the page
+    response = make_request("POST", f"/pages/{temp_page_id}/restore", headers=headers)
+    if response and response.status_code == 200:
+        data = response.json()
+        print_test(f"Restore page from trash: {data['title']}")
+        # Verify is_archived is False
+        if data.get('is_archived', True):
+            print_error("Page is still archived after restore", response)
+            return False
+    else:
+        print_error("Restore page failed", response)
+        return False
+
+    # Test 7.5: Verify page is no longer in trash
+    response = make_request("GET", f"/pages/trash?workspace_id={state['workspace_id']}", headers=headers)
+    if response and response.status_code == 200:
+        data = response.json()
+        found = any(page['id'] == temp_page_id for page in data)
+        if found:
+            print_error("Restored page still in trash", response)
+            return False
+        print_test("Verify page removed from trash after restore")
+    else:
+        print_error("List trash failed", response)
+        return False
+
+    # Test 7.6: Archive again for permanent deletion test
+    response = make_request("DELETE", f"/pages/{temp_page_id}", headers=headers)
+    if response and response.status_code == 204:
+        print_test("Archive page again (for permanent deletion test)")
+    else:
+        print_error("Archive page failed", response)
+        return False
+
+    # Test 7.7: Permanently delete the page
+    response = make_request("DELETE", f"/pages/{temp_page_id}/permanent", headers=headers)
+    if response and response.status_code == 204:
+        print_test("Permanently delete page")
+    else:
+        print_error("Permanent delete failed", response)
+        return False
+
+    # Test 7.8: Verify page is completely gone
+    response = make_request("GET", f"/pages/{temp_page_id}", headers=headers)
+    if response and response.status_code == 404:
+        print_test("Verify page permanently deleted (404)")
+    elif not response:
+        print_error("Request failed", None)
+        return False
+    else:
+        print_error(f"Page should be 404 after permanent deletion, got {response.status_code}", response)
+        return False
+
+    return True
+
+# =============================================================================
 # MAIN TEST RUNNER
 # =============================================================================
 
@@ -567,7 +670,8 @@ def run_all_tests():
         "Pages": False,
         "Blocks": False,
         "Search": False,
-        "Comments": False
+        "Comments": False,
+        "Trash/Restore": False
     }
 
     try:
@@ -582,6 +686,7 @@ def run_all_tests():
         results["Blocks"] = test_blocks()
         results["Search"] = test_search()
         results["Comments"] = test_comments()
+        results["Trash/Restore"] = test_trash()
 
     except Exception as e:
         print(f"\n[CRITICAL ERROR] {e}")
