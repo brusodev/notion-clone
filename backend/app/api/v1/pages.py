@@ -6,8 +6,10 @@ from app.api.deps import get_db, get_current_active_user
 from app.crud import page as crud_page
 from app.crud import workspace as crud_workspace
 from app.crud import page_version as crud_page_version
+from app.crud import page_favorite as crud_page_favorite
 from app.schemas.page import PageCreate, PageUpdate, PageMove, PageResponse, PageWithBlocks, PageTree
 from app.schemas.page_version import PageVersionResponse, PageVersionListItem
+from app.schemas.page_favorite import PageFavoriteResponse, PageFavoriteStatus
 from app.models.user import User
 
 router = APIRouter()
@@ -105,6 +107,21 @@ def list_trash(
 
     archived_pages = crud_page.get_archived(db, workspace_id=workspace_id)
     return archived_pages
+
+
+# ==================== FAVORITES ====================
+
+
+@router.get("/favorites", response_model=List[PageResponse])
+def get_favorites(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=100),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get all favorited pages for the current user"""
+    pages = crud_page_favorite.get_user_favorites(db, user_id=current_user.id, skip=skip, limit=limit)
+    return pages
 
 
 @router.get("/{page_id}", response_model=PageWithBlocks)
@@ -487,3 +504,74 @@ def restore_page_version(
     db.commit()
     db.refresh(page)
     return page
+
+
+@router.post("/{page_id}/favorite", response_model=PageFavoriteResponse, status_code=status.HTTP_201_CREATED)
+def add_favorite(
+    page_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Add a page to favorites"""
+    # Check if page exists
+    page = crud_page.get_by_id(db, page_id=page_id)
+    if not page:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Page not found"
+        )
+
+    # Check if user has access to the page (must be workspace member)
+    if not crud_workspace.is_member(db, workspace_id=page.workspace_id, user_id=current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not a member of this workspace"
+        )
+
+    # Add to favorites
+    favorite = crud_page_favorite.add_favorite(db, user_id=current_user.id, page_id=page_id)
+    if not favorite:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Page is already in favorites"
+        )
+
+    return favorite
+
+
+@router.delete("/{page_id}/favorite", status_code=status.HTTP_204_NO_CONTENT)
+def remove_favorite(
+    page_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Remove a page from favorites"""
+    removed = crud_page_favorite.remove_favorite(db, user_id=current_user.id, page_id=page_id)
+    if not removed:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Page not in favorites"
+        )
+
+
+@router.get("/{page_id}/favorite", response_model=PageFavoriteStatus)
+def check_favorite_status(
+    page_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Check if a page is favorited by the current user"""
+    from app.models.page_favorite import PageFavorite
+
+    is_favorited = crud_page_favorite.is_favorited(db, user_id=current_user.id, page_id=page_id)
+
+    favorited_at = None
+    if is_favorited:
+        favorite = db.query(PageFavorite).filter(
+            PageFavorite.user_id == current_user.id,
+            PageFavorite.page_id == page_id
+        ).first()
+        if favorite:
+            favorited_at = favorite.created_at
+
+    return PageFavoriteStatus(is_favorited=is_favorited, favorited_at=favorited_at)

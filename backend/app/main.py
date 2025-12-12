@@ -41,7 +41,7 @@ async def startup_event():
         logger.info("Initializing models...")
         # Import all models to ensure they are registered with Base.metadata
         from app.models import (
-            user, workspace, workspace_member, page, page_version, block, invitation,
+            user, workspace, workspace_member, page, page_version, page_favorite, block, invitation,
             comment, comment_reaction, comment_mention, comment_attachment
         )
         # Note: Using Alembic migrations instead of create_all for better control

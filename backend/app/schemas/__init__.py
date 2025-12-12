@@ -12,6 +12,10 @@ from app.schemas.comment import (
     CommentListResponse,
     MentionResponse,
 )
+from app.schemas.page_favorite import (
+    PageFavoriteResponse,
+    PageFavoriteStatus,
+)
 
 __all__ = [
     "UserBasic",
@@ -26,4 +30,6 @@ __all__ = [
     "CommentWithReplies",
     "CommentListResponse",
     "MentionResponse",
+    "PageFavoriteResponse",
+    "PageFavoriteStatus",
 ]

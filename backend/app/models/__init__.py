@@ -3,6 +3,7 @@ from app.models.workspace import Workspace
 from app.models.workspace_member import WorkspaceMember, WorkspaceRole
 from app.models.page import Page
 from app.models.page_version import PageVersion
+from app.models.page_favorite import PageFavorite
 from app.models.block import Block
 from app.models.comment import Comment
 from app.models.comment_reaction import CommentReaction
@@ -16,6 +17,7 @@ __all__ = [
     "WorkspaceRole",
     "Page",
     "PageVersion",
+    "PageFavorite",
     "Block",
     "Comment",
     "CommentReaction",
