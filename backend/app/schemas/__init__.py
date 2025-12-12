@@ -16,6 +16,13 @@ from app.schemas.page_favorite import (
     PageFavoriteResponse,
     PageFavoriteStatus,
 )
+from app.schemas.tag import (
+    TagCreate,
+    TagUpdate,
+    TagResponse,
+    TagWithPageCount,
+    PageTagResponse,
+)
 
 __all__ = [
     "UserBasic",
@@ -32,4 +39,9 @@ __all__ = [
     "MentionResponse",
     "PageFavoriteResponse",
     "PageFavoriteStatus",
+    "TagCreate",
+    "TagUpdate",
+    "TagResponse",
+    "TagWithPageCount",
+    "PageTagResponse",
 ]
