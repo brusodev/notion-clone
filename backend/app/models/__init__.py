@@ -4,7 +4,9 @@ from app.models.workspace_member import WorkspaceMember, WorkspaceRole
 from app.models.page import Page
 from app.models.page_version import PageVersion
 from app.models.page_favorite import PageFavorite
+from app.models.page_permission import PagePermission, PermissionLevel
 from app.models.tag import Tag, PageTag
+from app.models.file import File, FileType
 from app.models.block import Block
 from app.models.comment import Comment
 from app.models.comment_reaction import CommentReaction
@@ -19,8 +21,12 @@ __all__ = [
     "Page",
     "PageVersion",
     "PageFavorite",
+    "PagePermission",
+    "PermissionLevel",
     "Tag",
     "PageTag",
+    "File",
+    "FileType",
     "Block",
     "Comment",
     "CommentReaction",

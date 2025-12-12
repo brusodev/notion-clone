@@ -4,7 +4,7 @@ from redis import Redis
 import logging
 from app.core.config import settings
 from app.core.database import Base, engine
-from app.api.v1 import auth, workspaces, pages, blocks, invitations, search, comments, tags
+from app.api.v1 import auth, workspaces, pages, blocks, invitations, search, comments, tags, files, permissions
 
 # Configure logging
 logging.basicConfig(
@@ -41,8 +41,8 @@ async def startup_event():
         logger.info("Initializing models...")
         # Import all models to ensure they are registered with Base.metadata
         from app.models import (
-            user, workspace, workspace_member, page, page_version, page_favorite, tag, block, invitation,
-            comment, comment_reaction, comment_mention, comment_attachment
+            user, workspace, workspace_member, page, page_version, page_favorite, page_permission,
+            tag, file, block, invitation, comment, comment_reaction, comment_mention, comment_attachment
         )
         # Note: Using Alembic migrations instead of create_all for better control
         # Base.metadata.create_all(bind=engine)
@@ -72,6 +72,8 @@ app.include_router(invitations.router, prefix=f"{settings.API_V1_STR}/invitation
 app.include_router(search.router, prefix=f"{settings.API_V1_STR}/search", tags=["search"])
 app.include_router(comments.router, prefix=f"{settings.API_V1_STR}/comments", tags=["comments"])
 app.include_router(tags.router, prefix=f"{settings.API_V1_STR}", tags=["tags"])
+app.include_router(files.router, prefix=f"{settings.API_V1_STR}/files", tags=["files"])
+app.include_router(permissions.router, prefix=f"{settings.API_V1_STR}/permissions", tags=["permissions"])
 
 
 @app.get("/health")

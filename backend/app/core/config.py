@@ -31,11 +31,21 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
-    
+
+    # Cloudinary (File Upload)
+    CLOUDINARY_CLOUD_NAME: str = ""
+    CLOUDINARY_API_KEY: str = ""
+    CLOUDINARY_API_SECRET: str = ""
+
     @property
     def is_sqlite(self) -> bool:
         """Check if using SQLite database"""
         return self.DATABASE_URL.startswith("sqlite")
+
+    @property
+    def is_cloudinary_configured(self) -> bool:
+        """Check if Cloudinary is properly configured"""
+        return bool(self.CLOUDINARY_CLOUD_NAME and self.CLOUDINARY_API_KEY and self.CLOUDINARY_API_SECRET)
     
     model_config = SettingsConfigDict(
         env_file=".env",
