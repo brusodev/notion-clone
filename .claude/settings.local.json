@@ -27,7 +27,14 @@
       "Bash(timeout 10 python:*)",
       "Bash(ls:*)",
       "Bash(timeout:*)",
-      "Bash(set:*)"
+      "Bash(set:*)",
+      "Bash(npx create-next-app:*)",
+      "Bash(npm install:*)",
+      "Bash(npx playwright install chromium)",
+      "Bash(npx playwright test --project=chromium --reporter=list)",
+      "Bash(dir test-resultsauth-Autenticação-deve-criar-conta-com-sucesso-chromium)",
+      "Bash(find:*)",
+      "Bash(npx playwright test:*)"
     ],
     "deny": [],
     "ask": []

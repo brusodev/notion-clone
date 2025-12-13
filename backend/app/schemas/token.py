@@ -1,10 +1,18 @@
 from pydantic import BaseModel
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.schemas.user import UserResponse
 
 
 class Token(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+
+
+class AuthResponse(Token):
+    user: "UserResponse"
 
 
 class TokenPayload(BaseModel):

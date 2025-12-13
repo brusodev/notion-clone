@@ -10,7 +10,7 @@ from app.crud import user as crud_user
 from app.crud import workspace as crud_workspace
 from app.schemas.user import UserCreate, UserUpdate, UserResponse
 from app.schemas.workspace import WorkspaceCreate
-from app.schemas.token import Token, RefreshTokenRequest, LogoutRequest
+from app.schemas.token import Token, AuthResponse, RefreshTokenRequest, LogoutRequest
 
 router = APIRouter()
 
@@ -18,7 +18,7 @@ router = APIRouter()
 redis_client: Redis = None
 
 
-@router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 def register(
     user_in: UserCreate,
     db: Session = Depends(get_db)
@@ -31,25 +31,29 @@ def register(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
         )
-    
+
     # Create user
     user = crud_user.create(db, user_in=user_in)
-    
+
     # Create personal workspace
     workspace_in = WorkspaceCreate(
         name=f"{user.name}'s Workspace",
         icon="🏠"
     )
     crud_workspace.create(db, workspace_in=workspace_in, owner_id=user.id)
-    
+
     # Create tokens
     access_token = create_access_token({"sub": str(user.id), "email": user.email})
     refresh_token = create_refresh_token({"sub": str(user.id), "email": user.email})
-    
-    return Token(access_token=access_token, refresh_token=refresh_token)
+
+    return AuthResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        user=UserResponse.model_validate(user)
+    )
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=AuthResponse)
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
@@ -62,17 +66,21 @@ def login(
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Inactive user"
         )
-    
+
     access_token = create_access_token({"sub": str(user.id), "email": user.email})
     refresh_token = create_refresh_token({"sub": str(user.id), "email": user.email})
-    
-    return Token(access_token=access_token, refresh_token=refresh_token)
+
+    return AuthResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        user=UserResponse.model_validate(user)
+    )
 
 
 @router.post("/refresh", response_model=Token)

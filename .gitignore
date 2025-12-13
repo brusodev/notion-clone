@@ -76,3 +76,17 @@ alembic/versions/__pycache__/
 # OS
 Thumbs.db
 desktop.ini
+
+# Node.js / Frontend
+*node_modules/
+*.next/
+out/
+.vercel/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
