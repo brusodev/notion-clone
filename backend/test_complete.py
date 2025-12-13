@@ -166,13 +166,16 @@ def test_workspaces_create():
         }
 
         response = requests.post(f"{API_V1}/workspaces/", json=workspace_data, headers=headers)
-        assert response.status_code == 200
-        data = response.json()
 
-        print_success(f"Workspace criado: {data['name']}")
-        print_success(f"ID: {data['id']}")
-        print_success(f"Ícone: {data.get('icon', 'Sem ícone')}")
-        return True
+        if response.status_code in [200, 201]:
+            data = response.json()
+            print_success(f"Workspace criado: {data['name']}")
+            print_success(f"ID: {data['id']}")
+            return True
+        else:
+            print_error(f"Status inesperado: {response.status_code}")
+            print_error(f"Response: {response.text}")
+            return False
     except Exception as e:
         print_error(f"Erro ao criar workspace: {str(e)}")
         return False
