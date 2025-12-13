@@ -29,8 +29,10 @@ export default function LoginPage() {
       setAuth(response);
       router.push("/dashboard");
     } catch (err: unknown) {
-      setError(formatApiError(err));
-    } finally{
+      const errorMsg = formatApiError(err);
+      setError(errorMsg);
+      console.error("Login error:", err, "Formatted:", errorMsg);
+    } finally {
       setIsLoading(false);
     }
   };

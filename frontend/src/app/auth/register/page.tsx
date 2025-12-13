@@ -42,11 +42,14 @@ export default function RegisterPage() {
         email,
         password,
         name: fullName,
+        password_confirm: confirmPassword,
       });
       setAuth(response);
       router.push("/dashboard");
     } catch (err: unknown) {
-      setError(formatApiError(err));
+      const errorMsg = formatApiError(err);
+      setError(errorMsg);
+      console.error("Register error:", err, "Formatted:", errorMsg);
     } finally {
       setIsLoading(false);
     }

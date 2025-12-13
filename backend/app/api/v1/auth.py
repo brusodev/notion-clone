@@ -24,6 +24,13 @@ def register(
     db: Session = Depends(get_db)
 ):
     """Register a new user and create personal workspace"""
+    # Validate passwords match
+    if user_in.password != user_in.password_confirm:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="As senhas não coincidem"
+        )
+    
     # Check if user already exists
     existing_user = crud_user.get_by_email(db, email=user_in.email)
     if existing_user:
