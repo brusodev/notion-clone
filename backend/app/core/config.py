@@ -7,12 +7,12 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Notion Clone API"
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
-    
-    # Database (SQLite for local dev, PostgreSQL for production)
-    DATABASE_URL: str = "sqlite:///./notion_clone.db"
-    
+
+    # Database (PostgreSQL only)
+    DATABASE_URL: str
+
     # Redis (optional - app works without it)
-    REDIS_URL: str = "redis://localhost:6379"
+    REDIS_URL: str = ""
     
     # JWT
     SECRET_KEY: str = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
@@ -36,11 +36,6 @@ class Settings(BaseSettings):
     CLOUDINARY_CLOUD_NAME: str = ""
     CLOUDINARY_API_KEY: str = ""
     CLOUDINARY_API_SECRET: str = ""
-
-    @property
-    def is_sqlite(self) -> bool:
-        """Check if using SQLite database"""
-        return self.DATABASE_URL.startswith("sqlite")
 
     @property
     def is_cloudinary_configured(self) -> bool:

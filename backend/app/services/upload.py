@@ -7,7 +7,6 @@ import cloudinary.uploader
 from typing import Optional, Dict, Any
 from fastapi import UploadFile, HTTPException, status
 import mimetypes
-import os
 from app.core.config import settings
 from app.models.file import FileType
 
@@ -43,15 +42,24 @@ class UploadService:
 
     def __init__(self):
         """Initialize Cloudinary configuration"""
-        if not settings.is_cloudinary_configured:
-            raise RuntimeError("Cloudinary is not properly configured. Please check your environment variables.")
+        self._configured = False
 
-        cloudinary.config(
-            cloud_name=settings.CLOUDINARY_CLOUD_NAME,
-            api_key=settings.CLOUDINARY_API_KEY,
-            api_secret=settings.CLOUDINARY_API_SECRET,
-            secure=True
-        )
+        if settings.is_cloudinary_configured:
+            cloudinary.config(
+                cloud_name=settings.CLOUDINARY_CLOUD_NAME,
+                api_key=settings.CLOUDINARY_API_KEY,
+                api_secret=settings.CLOUDINARY_API_SECRET,
+                secure=True
+            )
+            self._configured = True
+
+    def _ensure_configured(self):
+        """Ensure Cloudinary is configured before operations"""
+        if not self._configured:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="File upload service is not configured. Please configure Cloudinary credentials."
+            )
 
     def _determine_file_type(self, mime_type: Optional[str]) -> FileType:
         """Determine FileType enum from MIME type"""
@@ -132,6 +140,9 @@ class UploadService:
         Raises:
             HTTPException: If file validation fails or upload fails
         """
+        # Ensure Cloudinary is configured
+        self._ensure_configured()
+
         # Validate file
         self._validate_file(file)
 
@@ -222,6 +233,9 @@ class UploadService:
         Raises:
             HTTPException: If deletion fails
         """
+        # Ensure Cloudinary is configured
+        self._ensure_configured()
+
         try:
             result = cloudinary.uploader.destroy(
                 storage_id,
@@ -249,6 +263,9 @@ class UploadService:
         Returns:
             Full URL to the file
         """
+        # Ensure Cloudinary is configured
+        self._ensure_configured()
+
         if transformation:
             return cloudinary.CloudinaryImage(storage_id).build_url(
                 transformation=transformation

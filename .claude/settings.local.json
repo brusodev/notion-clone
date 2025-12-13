@@ -26,7 +26,8 @@
       "Bash(taskkill:*)",
       "Bash(timeout 10 python:*)",
       "Bash(ls:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(set:*)"
     ],
     "deny": [],
     "ask": []
