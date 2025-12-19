@@ -33,9 +33,9 @@ export const EditorBubbleMenu = ({ editor, className, ...props }: EditorBubbleMe
     if (!editor) return;
 
     if (linkUrl === "") {
-      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      editor.chain().focus().extendMarkRange("link").toggleLink({ href: "" }).run();
     } else {
-      editor.chain().focus().extendMarkRange("link").setLink({ href: linkUrl }).run();
+      editor.chain().focus().extendMarkRange("link").toggleLink({ href: linkUrl }).run();
     }
     setIsLinkOpen(false);
   }, [editor, linkUrl]);
