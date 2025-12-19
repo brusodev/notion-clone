@@ -18,6 +18,7 @@ router = APIRouter()
 @router.get("/", response_model=List[PageResponse])
 def list_pages(
     workspace_id: UUID = Query(..., description="Workspace ID"),
+    include_archived: bool = Query(False, description="Include archived pages"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
@@ -29,7 +30,7 @@ def list_pages(
             detail="Not a member of this workspace"
         )
     
-    pages = crud_page.get_by_workspace(db, workspace_id=workspace_id)
+    pages = crud_page.get_by_workspace(db, workspace_id=workspace_id, include_archived=include_archived)
     return pages
 
 
@@ -179,6 +180,52 @@ def update_page(
         change_summary=change_summary
     )
     return updated_page
+
+
+@router.post("/{page_id}/restore", response_model=PageResponse)
+def restore_page(
+    page_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Restore page from trash"""
+    page = crud_page.get_by_id(db, page_id=page_id)
+    if not page:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Page not found"
+        )
+    
+    if not crud_workspace.is_member(db, workspace_id=page.workspace_id, user_id=current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not a member of this workspace"
+        )
+    
+    return crud_page.restore(db, page=page)
+
+
+@router.delete("/{page_id}/permanent", status_code=status.HTTP_204_NO_CONTENT)
+def delete_page_permanently(
+    page_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Permanently delete page"""
+    page = crud_page.get_by_id(db, page_id=page_id)
+    if not page:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Page not found"
+        )
+    
+    if not crud_workspace.is_member(db, workspace_id=page.workspace_id, user_id=current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not a member of this workspace"
+        )
+        
+    crud_page.delete(db, page=page)
 
 
 @router.delete("/{page_id}", status_code=status.HTTP_204_NO_CONTENT)

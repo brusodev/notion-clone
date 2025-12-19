@@ -76,7 +76,8 @@ export type BlockType =
   | "numbered_list"
   | "code"
   | "quote"
-  | "divider";
+  | "divider"
+  | "editor_content";
 
 export interface Block {
   id: string;

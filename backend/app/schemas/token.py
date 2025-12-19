@@ -15,6 +15,13 @@ class AuthResponse(Token):
     user: "UserResponse"
 
 
+# Rebuild model after all imports are complete
+def setup_models():
+    """Setup forward references after all schemas are imported"""
+    from app.schemas.user import UserResponse
+    AuthResponse.model_rebuild()
+
+
 class TokenPayload(BaseModel):
     sub: str  # user_id
     email: str

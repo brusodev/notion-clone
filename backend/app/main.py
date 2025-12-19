@@ -4,7 +4,7 @@ from redis import Redis
 import logging
 from app.core.config import settings
 from app.core.database import Base, engine
-from app.api.v1 import auth, workspaces, pages, blocks, invitations, search, comments, tags, files, permissions
+from app.api.v1 import auth, workspaces, pages, blocks, invitations, search, comments, tags, files, permissions, public
 
 # Configure logging
 logging.basicConfig(
@@ -74,6 +74,7 @@ app.include_router(comments.router, prefix=f"{settings.API_V1_STR}/comments", ta
 app.include_router(tags.router, prefix=f"{settings.API_V1_STR}", tags=["tags"])
 app.include_router(files.router, prefix=f"{settings.API_V1_STR}/files", tags=["files"])
 app.include_router(permissions.router, prefix=f"{settings.API_V1_STR}/permissions", tags=["permissions"])
+app.include_router(public.router, prefix=f"{settings.API_V1_STR}/public", tags=["public"])
 
 
 @app.get("/health")

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/stores/auth-store";
 import { formatApiError } from "@/lib/error-handler";
+import { AlertCircle, UserPlus } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -30,116 +31,181 @@ export default function RegisterPage() {
       return;
     }
 
-    if (password.length < 6) {
-      setError("A senha deve ter pelo menos 6 caracteres");
+    if (password.length < 8) {
+      setError("A senha deve ter pelo menos 8 caracteres");
       return;
     }
 
     setIsLoading(true);
 
     try {
+      console.log("Iniciando registro com dados:", { email, name: fullName });
       const response = await authService.register({
         email,
         password,
         name: fullName,
         password_confirm: confirmPassword,
       });
+      console.log("Registro bem-sucedido:", response);
       setAuth(response);
       router.push("/dashboard");
     } catch (err: unknown) {
       const errorMsg = formatApiError(err);
       setError(errorMsg);
-      console.error("Register error:", err, "Formatted:", errorMsg);
+      console.error("Register error:", err);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="w-full max-w-md space-y-8 px-4">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold">Criar conta</h1>
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-background via-background to-secondary/20 px-4">
+      <div className="w-full max-w-md">
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <div className="mb-4 flex justify-center">
+            <div className="rounded-lg bg-primary/10 p-3">
+              <UserPlus className="h-8 w-8 text-primary" />
+            </div>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">Criar conta</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Comece a usar o Notion Clone gratuitamente
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="fullName">Nome completo</Label>
-              <Input
-                id="fullName"
-                type="text"
-                placeholder="Seu nome"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-                disabled={isLoading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={isLoading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={isLoading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar senha</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                disabled={isLoading}
-              />
-            </div>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Full Name Field */}
+          <div className="space-y-2">
+            <Label htmlFor="fullName" className="text-sm font-medium">
+              Nome completo
+            </Label>
+            <Input
+              id="fullName"
+              type="text"
+              placeholder="Seu nome"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+              disabled={isLoading}
+              className="h-10"
+            />
           </div>
 
+          {/* Email Field */}
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-sm font-medium">
+              Email
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="seu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={isLoading}
+              className="h-10"
+            />
+          </div>
+
+          {/* Password Field */}
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-sm font-medium">
+              Senha
+            </Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              disabled={isLoading}
+              className="h-10"
+            />
+            <p className="text-xs text-muted-foreground">
+              Mínimo 8 caracteres
+            </p>
+          </div>
+
+          {/* Confirm Password Field */}
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword" className="text-sm font-medium">
+              Confirmar senha
+            </Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              placeholder="••••••••"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              disabled={isLoading}
+              className="h-10"
+            />
+          </div>
+
+          {/* Error Message */}
           {error && (
-            <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-              {error}
+            <div className="flex items-center gap-3 rounded-lg bg-destructive/10 p-4 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Criando conta..." : "Criar conta"}
+          {/* Submit Button */}
+          <Button 
+            type="submit" 
+            className="h-10 w-full font-medium" 
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                Criando conta...
+              </>
+            ) : (
+              <>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Criar conta
+              </>
+            )}
           </Button>
         </form>
 
-        <div className="text-center text-sm">
-          <span className="text-muted-foreground">Já tem uma conta? </span>
+        {/* Divider */}
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border"></div>
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">Já tem conta?</span>
+          </div>
+        </div>
+
+        {/* Sign In Link */}
+        <div className="text-center">
           <Link
             href="/auth/login"
-            className="font-medium text-primary hover:underline"
+            className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 font-medium text-sm hover:bg-secondary transition-colors w-full"
           >
-            Fazer login
+            Entrar
           </Link>
         </div>
+
+        {/* Footer */}
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          Ao criar uma conta, você concorda com nossos{" "}
+          <Link href="#" className="hover:underline text-primary">
+            Termos de Serviço
+          </Link>
+          {" "}e{" "}
+          <Link href="#" className="hover:underline text-primary">
+            Política de Privacidade
+          </Link>
+        </p>
       </div>
     </div>
   );

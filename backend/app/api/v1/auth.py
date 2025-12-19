@@ -3,6 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from redis import Redis
 from datetime import timedelta
+import logging
 from app.api.deps import get_db, get_current_active_user
 from app.core.config import settings
 from app.core.security import create_access_token, create_refresh_token, decode_token
@@ -10,7 +11,12 @@ from app.crud import user as crud_user
 from app.crud import workspace as crud_workspace
 from app.schemas.user import UserCreate, UserUpdate, UserResponse
 from app.schemas.workspace import WorkspaceCreate
-from app.schemas.token import Token, AuthResponse, RefreshTokenRequest, LogoutRequest
+from app.schemas.token import Token, AuthResponse, RefreshTokenRequest, LogoutRequest, setup_models
+
+# Initialize Pydantic models with forward references
+setup_models()
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -24,40 +30,60 @@ def register(
     db: Session = Depends(get_db)
 ):
     """Register a new user and create personal workspace"""
-    # Validate passwords match
-    if user_in.password != user_in.password_confirm:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="As senhas não coincidem"
+    logger.info(f"Registration attempt for email: {user_in.email}")
+    try:
+        # Validate passwords match
+        if user_in.password != user_in.password_confirm:
+            logger.warning(f"Password mismatch for email: {user_in.email}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="As senhas não coincidem"
+            )
+        
+        # Check if user already exists
+        existing_user = crud_user.get_by_email(db, email=user_in.email)
+        if existing_user:
+            logger.warning(f"Email already registered: {user_in.email}")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email already registered"
+            )
+
+        # Create user
+        logger.info(f"Creating user: {user_in.email}")
+        user = crud_user.create(db, user_in=user_in)
+        logger.info(f"User created successfully: {user.id}")
+
+        # Create personal workspace
+        logger.info(f"Creating personal workspace for user: {user.id}")
+        workspace_in = WorkspaceCreate(
+            name=f"{user.name}'s Workspace",
+            icon="🏠"
         )
-    
-    # Check if user already exists
-    existing_user = crud_user.get_by_email(db, email=user_in.email)
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+        crud_workspace.create(db, workspace_in=workspace_in, owner_id=user.id)
+        logger.info(f"Workspace created successfully for user: {user.id}")
+
+        # Create tokens
+        logger.info(f"Creating tokens for user: {user.id}")
+        access_token = create_access_token({"sub": str(user.id), "email": user.email})
+        refresh_token = create_refresh_token({"sub": str(user.id), "email": user.email})
+
+        logger.info(f"Registration successful for email: {user_in.email}")
+        return AuthResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer",
+            user=UserResponse.model_validate(user)
         )
-
-    # Create user
-    user = crud_user.create(db, user_in=user_in)
-
-    # Create personal workspace
-    workspace_in = WorkspaceCreate(
-        name=f"{user.name}'s Workspace",
-        icon="🏠"
-    )
-    crud_workspace.create(db, workspace_in=workspace_in, owner_id=user.id)
-
-    # Create tokens
-    access_token = create_access_token({"sub": str(user.id), "email": user.email})
-    refresh_token = create_refresh_token({"sub": str(user.id), "email": user.email})
-
-    return AuthResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        user=UserResponse.model_validate(user)
-    )
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error during registration: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error creating user: {str(e)}"
+        )
 
 
 @router.post("/login", response_model=AuthResponse)
